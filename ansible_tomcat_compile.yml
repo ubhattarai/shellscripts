@@ -1,0 +1,48 @@
+---
+- hosts: REMOTEHOST
+  remote_user: user
+  vars:
+      tomcat_ver: "8.5.23"
+      tomcat_dir: "/opt/tomcat"
+      tomcat_log: "/var/opt/tomcat"
+  tasks:
+
+  - name: Create Tomcat directory
+    file:
+        path: '{{ tomcat_dir }}'
+        state: directory
+        mode: 0755
+
+  - name: Download Tomcat and Extract Tomcat
+    unarchive:
+             src: http://apache.claz.org/tomcat/tomcat-8/v{{tomcat_ver}}/bin/apache-tomcat-{{tomcat_ver}}.tar.gz
+             dest: '{{ tomcat_dir }}'
+             remote_src: yes
+
+  - name: Move to Tomcat Directory
+    command: mv '{{ tomcat_dir }}/apache-tomcat-{{ tomcat_ver }}' '{{ tomcat_dir }}/{{ tomcat_ver }}'
+
+  - name: Creating log Directory
+    file:
+        path: '{{ tomcat_log }}/{{ tomcat_ver }}'
+        state: directory
+        mode: 0755
+
+  - name: Changing Current
+    file:
+        src: '{{ item.src }}'
+        dest: '{{ item.dest }}'
+        state: link
+    with_items:
+        - { src: '{{ tomcat_dir }}/{{ tomcat_ver }}', dest: '{{ tomcat_dir }}/current' }
+        - { src: '{{ tomcat_log }}/{{ tomcat_ver }}', dest: '{{ tomcat_dir }}/current/log' }
+
+  - name: Change owenrship
+    file:
+        path: '{{ item }}'
+        owner: tomcat
+        group: tomcat
+        recurse: yes
+    with_items:
+        - '{{ tomcat_dir }}'
+        - '{{ tomcat_log }}'
