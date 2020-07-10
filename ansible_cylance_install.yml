@@ -1,0 +1,52 @@
+---
+  - hosts: "{{ machine }}"
+    tasks:
+
+      - name: install dependencies
+        yum:
+          name:
+            - zlib
+            - gcc
+            - kernel-devel
+            - bzip2
+          state: latest
+        become: true
+        become_user: root
+
+      - name: create /opt/cylance directory
+        file:
+          path: /opt/cylance
+          state: directory
+          mode: 0755
+          owner: root
+          group: root
+      - name: copy config_defaults.txt
+        copy:
+          src: /etc/ansible/files/cylance/config_defaults.txt
+          dest: /opt/cylance/config_defaults.txt
+      - name: Install cylance agent for version 6
+        yum:
+          name: "http://redhatrepo.local/pub/cylance/{{ item }}"
+          state: present
+        with_items:
+          - CylancePROTECT.el6.rpm
+        when: (ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat') and ansible_distribution_major_version == '6' and facter_kernelmajversion == '2.6'
+      - name: dowload cylance agent for version 7
+        yum:
+          name: "http://redhatrepo.local/pub/cylance/{{ item }}"
+          state: present
+        with_items:
+          - CylancePROTECT.el7.rpm
+        when: (ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat') and ansible_distribution_major_version == '7'
+      - name: start service
+        service:
+          name: cylancesvc
+          enabled: yes
+          state: started
+        when: (ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat') and ansible_distribution_major_version == '6'
+      - name: start service
+        systemd:
+          name: cylancesvc
+          enabled: yes
+          state: started
+        when: (ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat') and ansible_distribution_major_version == '7'
