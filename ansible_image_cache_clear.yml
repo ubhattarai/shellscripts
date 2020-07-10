@@ -1,0 +1,117 @@
+---
+  - hosts: localhost
+    gather_facts: no
+    vars:
+      imageurl: ["{{ imageurl }}"]
+
+
+    tasks:
+       - name: Split input
+         debug:
+           msg: "{{ item | urlsplit}}"
+         register: url_options
+         with_items:
+           - "{{ imageurl }}"
+
+       #- name: display variables
+       #  debug:
+       #    var: url_options
+       #
+       #- name: DEBUG - Display variables
+       #  debug:
+       #    var: item.msg.path+'?'+item.msg.query
+       #    with_items:
+       #    - "{{ url_options.results }}"
+
+       - name: Clear Instart Image cache
+         uri:
+           url: https://image.cache.com/purge
+           validate_certs: no
+           force_basic_auth: yes
+           user: example@example.com
+           password: password
+           method: POST
+           body_format: json
+           return_content: yes
+           body: {"purge_request":{"action":"PURGE","uris":[{"match_mode":"EXACT_LITERAL", "uri_pattern":"{{ item }}"}]}}
+           status_code: 201
+         with_items:
+           - "{{ imageurl }}"
+
+       - name: Clear Server 1Image cache
+         uri:
+           url: https://server1.com/mgen/clearCachedMedia.ms?mrl={{ item.msg.path | urlencode }}?{{ item.msg.query | urlencode }}
+           validate_certs: no
+           method: GET
+           return_content: yes
+         register: clear_cache_output
+         with_items:
+             - "{{ url_options.results }}"
+
+       - name: URL for sever1
+         debug:
+           var: clear_cache_output.results[0].url
+
+       - name: Output from server1
+         debug:
+           var: clear_cache_output.results[0].content
+
+
+
+       - name: Clear Server2 Image cache
+         uri:
+           url: https://sevrer2.com/mgen/clearCachedMedia.ms?mrl={{ item.msg.path | urlencode }}?{{ item.msg.query | urlencode }}
+           validate_certs: no
+           method: GET
+           return_content: yes
+         register: clear_cache_output
+         with_items:
+             - "{{ url_options.results }}"
+
+       - name: URL for server2
+         debug:
+           var: clear_cache_output.results[0].url
+
+       - name: Output from server2
+         debug:
+           var: clear_cache_output.results[0].content
+
+
+
+       - name: Clear Server3 Image cache
+         uri:
+           url: https://server3.com/mgen/clearCachedMedia.ms?mrl={{ item.msg.path | urlencode }}?{{ item.msg.query | urlencode }}
+           validate_certs: no
+           method: GET
+           return_content: yes
+         register: clear_cache_output
+         with_items:
+             - "{{ url_options.results }}"
+
+       - name: URL for server3
+         debug:
+           var: clear_cache_output.results[0].url
+
+       - name: Output from server3
+         debug:
+           var: clear_cache_output.results[0].content
+
+
+
+       - name: Clear Server4 Image cache
+         uri:
+           url: https://server4.com/mgen/clearCachedMedia.ms?mrl={{ item.msg.path | urlencode }}?{{ item.msg.query | urlencode }}
+           validate_certs: no
+           method: GET
+           return_content: yes
+         register: clear_cache_output
+         with_items:
+             - "{{ url_options.results }}"
+
+       - name: URL for server4
+         debug:
+           var: clear_cache_output.results[0].url
+
+       - name: Output server4
+         debug:
+           var: clear_cache_output.results[0].content

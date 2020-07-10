@@ -1,0 +1,60 @@
+---
+- hosts: "{{ machine }}"
+  remote_user: user
+  tasks:
+
+   - name: Identify our environment
+     shell: "hostname -s | cut -c11"
+     register: env
+
+   - name: Identify our DC
+     shell: "hostname -s | cut -c3"
+     register: DC
+
+   - name: stop tomcat
+     systemd:
+        name: tomcat
+        state: stopped
+
+   - name: Get rid of the old war
+     file:
+       path: /opt/tomcat/current/webapps/mywar.war
+       state: absent
+
+   - name: Deploy the stage proxy & setenv
+     copy:
+       src: "/etc/ansible/files/apigw/{{ item.src }}"
+       dest: "{{ item.dest }}"
+       owner: tomcat
+       group: tomcat
+     with_items:
+        - { src: mywar.stage.war, dest: /opt/tomcat/current/webapps/mywar.war, mode: 0644 }
+        - { src: setenv.stage.sh, dest: /opt/tomcat/current/bin/setenv.sh, mode: 0755 }
+     when: env.stdout == 's'
+
+   - name: Deploy the dc1 proxy war & setenv
+     copy:
+       src: "/etc/ansible/files/gw/{{ item.src }}"
+       dest: "{{ item.dest }}"
+       owner: tomcat
+       group: tomcat
+     with_items:
+        - { src: mywar.prod.dc1.war, dest: /opt/tomcat/current/webapps/mywar.war, mode: 0644 }
+        - { src: setenv.prod.sh, dest: /opt/tomcat/current/bin/setenv.sh, mode: 0755 }
+     when: env.stdout == 'p' and DC.stdout == '1'
+
+   - name: Deploy the dc2 proxy war
+     copy:
+       src: "/etc/ansible/files/gw/{{ item.src }}"
+       dest: "{{ item.dest }}"
+       owner: tomcat
+       group: tomcat
+     with_items:
+        - { src: mywar.prod.dc2.war, dest: /opt/tomcat/current/webapps/mywar.war, mode: 0644 }
+        - { src: setenv.prod.sh, dest: /opt/tomcat/current/bin/setenv.sh, mode: 0755 }
+     when: env.stdout == 'p' and DC.stdout == '2'
+
+   - name: restart tomcat
+     systemd:
+        name: tomcat
+        state: started
